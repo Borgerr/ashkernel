@@ -22,7 +22,8 @@ run: elf
 		-bios default \
 		-serial mon:stdio \
 		--no-reboot \
-		-nographic
+		-nographic \
+		-kernel kernel.elf
 
 # Clean build artifacts
 clean:

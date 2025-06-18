@@ -20,5 +20,6 @@ $QEMU \
     -bios default \
     -serial mon:stdio \
     --no-reboot \
-    -nographic
+    -nographic \
+    -kernel kernel.elf
 
