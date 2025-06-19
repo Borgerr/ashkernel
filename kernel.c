@@ -30,18 +30,6 @@ struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
     return (struct sbiret){.error = a0, .value = a1};
 }
 
-void *memset(void *buf, char c, size_t size)
-{
-	/*
-	 * set membuf at `void *buf` to `char c`
-	 * buf assumed to be of size `size`
-	 */
-	uint8_t *current = (uint8_t *) buf;
-	for (size_t i = 0; i < size; i++)
-		*current++ = c; // XXX: maybe an off by 1 error idk
-	return buf;
-}
-
 void putchar(char ch)
 {
     /*

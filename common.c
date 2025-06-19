@@ -1,7 +1,6 @@
 #include "common.h"
 
 void putchar(char ch);
-
 void printf(const char *fmt, ...) {
     va_list vargs;
     va_start(vargs, fmt);
@@ -62,3 +61,62 @@ void printf(const char *fmt, ...) {
 end:
     va_end(vargs);
 }
+
+void *memset(void *buf, char c, size_t size)
+{
+	/*
+	 * set membuf at `void *buf` to `char c`
+	 * buf assumed to be of size `size`
+	 */
+	uint8_t *current = (uint8_t *) buf;
+	for (size_t i = 0; i < size; i++)
+		*current++ = c; // XXX: maybe an off by 1 error idk
+	return buf;
+}
+
+void *memcpy(void *dst, const void *src, size_t n)
+{
+    /*
+     * Copies `n` bytes from `src` to `dst`
+     */
+    uint8_t *d = (uint8_t *)dst;
+    uint8_t *s = (uint8_t *)src;
+    while (n--)
+        *d++ = *s++;
+    return dst;
+}
+
+void *strcpy(char *dst, const char *src)
+{
+    /*
+     * Copies string from src to dst
+     * Assumes null termination
+     */
+    uint8_t *d = (uint8_t *)dst;
+    uint8_t *s = (uint8_t *)src;
+
+    do
+        *d++ = *s++;
+    while (*s);
+
+    return dst;
+}
+
+int strcmp(const char *s1, const char *s2)
+{
+    /*
+     * Comparies s1 and s2
+     * - s1 == s2 -> 0
+     * - else -> s1 - s2
+     */
+
+    while (*s1 && *s2)
+    {
+        if (*s1 != *s2) break;
+        s1++;
+        s2++;
+    }
+
+    return *(unsigned char *)s1 - *(unsigned char *)s2;
+}
+
