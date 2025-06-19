@@ -1,8 +1,33 @@
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef uint32_t size_t;	// pointers are 32b
+#include "kernel.h"
 
-extern char __bss[], __bss_end[], __stack_top[];	// taken from kernel.ld
+extern uint8_t __bss[], __bss_end[], __stack_top[];	// taken from kernel.ld
+
+struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
+		long arg5, long fid, long eid)
+{
+    /*
+     * S-Mode (kernel) to M-Mode (OpenSBI), OpenSBI invokes processing handler,
+     * and switches back to kernel mode.
+     */
+
+    // asks compiler to place values on rhs in specified registers, variables lhs
+    // reference: https://git.musl-libc.org/cgit/musl/tree/arch/riscv64/syscall_arch.h
+	register long a0 __asm__("a0") = arg0;
+	register long a1 __asm__("a1") = arg1;
+	register long a2 __asm__("a2") = arg2;
+	register long a3 __asm__("a3") = arg3;
+	register long a4 __asm__("a4") = arg4;
+	register long a5 __asm__("a5") = arg5;
+	register long a6 __asm__("a6") = fid;
+	register long a7 __asm__("a7") = eid;
+
+    __asm__ __volatile__("ecall"
+            : "=r"(a0), "=r"(a1)
+            : "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5),
+              "r"(a6), "r"(a7)
+            : "memory");
+    return (struct sbiret){.error = a0, .value = a1};
+}
 
 void *memset(void *buf, char c, size_t size)
 {
@@ -12,15 +37,46 @@ void *memset(void *buf, char c, size_t size)
 	 */
 	uint8_t *current = (uint8_t *) buf;
 	for (size_t i = 0; i < size; i++)
-		*current++ = c;
+		*current++ = c; // XXX: maybe an off by 1 error idk
 	return buf;
+}
+
+void sbi_console_putchar(char ch)
+{
+    /*
+     * long sbi_console_putchar(int ch);
+     * Puts a char to the screen.
+     * SBI call blocks if remaining pending characters, or receiving terminal isn't ready to receive.
+     *
+     * Follows SBI calling conventions
+     * EID 0x01
+     */
+    sbi_call(ch, 0, 0, 0, 0, 0, 0, 1); // EID = 0x01, arg 0 is ch
+}
+
+void sbi_console_putstr(char *s)
+{
+    /*
+     * Puts a null-terminated string.
+     * NOT a part of the OpenSBI spec afaict, but a nice encoding.
+     */
+    char *current = s;
+    while (*current)
+    {
+        sbi_console_putchar(*current);
+        current++;
+    }
 }
 
 void kernel_main(void)
 {
 	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
 
-	for (;;) ;
+    char *hello = "\r\nHello, World!\r\n";
+    sbi_console_putstr(hello);
+
+	for (;;)
+        __asm__ __volatile__("wfi");
 }
 
 // XXX: specific to RISC-V
