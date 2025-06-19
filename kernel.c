@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "common.h"
 
 extern uint8_t __bss[], __bss_end[], __stack_top[];	// taken from kernel.ld
 
@@ -41,7 +42,7 @@ void *memset(void *buf, char c, size_t size)
 	return buf;
 }
 
-void sbi_console_putchar(char ch)
+void putchar(char ch)
 {
     /*
      * long sbi_console_putchar(int ch);
@@ -54,26 +55,27 @@ void sbi_console_putchar(char ch)
     sbi_call(ch, 0, 0, 0, 0, 0, 0, 1); // EID = 0x01, arg 0 is ch
 }
 
+/*
 void sbi_console_putstr(char *s)
 {
-    /*
      * Puts a null-terminated string.
      * NOT a part of the OpenSBI spec afaict, but a nice encoding.
-     */
     char *current = s;
     while (*current)
     {
-        sbi_console_putchar(*current);
+        putchar(*current);
         current++;
     }
 }
+*/
 
 void kernel_main(void)
 {
 	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
 
     char *hello = "\r\nHello, World!\r\n";
-    sbi_console_putstr(hello);
+    printf(hello);
+    printf("guh, %s is certainly a string...", "this");
 
 	for (;;)
         __asm__ __volatile__("wfi");
