@@ -6,7 +6,7 @@ QEMU = qemu-system-riscv32
 CFLAGS = -std=c11 -O2 -g3 -Wall -Wextra --target=riscv32-unknown-elf -fno-stack-protector -ffreestanding -nostdlib
 LDFLAGS = -Wl,-Tkernel.ld -Wl,-Map=kernel.map
 OUTPUT = kernel.elf
-SRC = kernel.c common.c
+SRC = sys/*.c common.c
 
 # Default target
 all: elf

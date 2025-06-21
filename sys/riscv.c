@@ -1,7 +1,8 @@
 #include "kernel.h"
-#include "common.h"
+#include "../common.h"
+#include "riscv.h"
 
-extern uint8_t __bss[], __bss_end[], __stack_top[];	// taken from kernel.ld
+extern uint8_t __stack_top[];
 
 struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
 		long arg5, long fid, long eid)
@@ -30,47 +31,6 @@ struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
     return (struct sbiret){.error = a0, .value = a1};
 }
 
-void putchar(char ch)
-{
-    /*
-     * long sbi_console_putchar(int ch);
-     * Puts a char to the screen.
-     * SBI call blocks if remaining pending characters, or receiving terminal isn't ready to receive.
-     *
-     * Follows SBI calling conventions
-     * EID 0x01
-     */
-    sbi_call(ch, 0, 0, 0, 0, 0, 0, 1); // EID = 0x01, arg 0 is ch
-}
-
-/*
-void sbi_console_putstr(char *s)
-{
-     * Puts a null-terminated string.
-     * NOT a part of the OpenSBI spec afaict, but a nice encoding.
-    char *current = s;
-    while (*current)
-    {
-        putchar(*current);
-        current++;
-    }
-}
-*/
-
-void kernel_main(void)
-{
-	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
-
-    char *hello = "\r\nHello, World!\r\n";
-    printf(hello);
-    printf("guh, %s is certainly a string...", "this");
-
-	for (;;)
-        __asm__ __volatile__("wfi");
-}
-
-// XXX: specific to RISC-V
-// with potential hardware ports, move.
 __attribute__((section(".text.boot")))
 __attribute__((naked))
 void boot(void)
@@ -85,5 +45,18 @@ void boot(void)
 		:
 		: [stack_top] "r" (__stack_top)	// %[stack_top] in asm == __stack_top in C
 	);
+}
+
+void putchar(char ch)
+{
+    /*
+     * long sbi_console_putchar(int ch);
+     * Puts a char to the screen.
+     * SBI call blocks if remaining pending characters, or receiving terminal isn't ready to receive.
+     *
+     * Follows SBI calling conventions
+     * EID 0x01
+     */
+    sbi_call(ch, 0, 0, 0, 0, 0, 0, 1); // EID = 0x01, arg 0 is ch
 }
 
