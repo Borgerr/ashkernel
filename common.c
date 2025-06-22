@@ -1,7 +1,8 @@
 #include "common.h"
 
 void putchar(char ch);
-void printf(const char *fmt, ...) {
+void printf(const char *fmt, ...)
+{
     va_list vargs;
     va_start(vargs, fmt);
 
