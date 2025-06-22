@@ -5,8 +5,6 @@ typedef unsigned int uint32_t;
 typedef unsigned short uint16_t;
 typedef unsigned long long uint64_t;
 typedef uint32_t size_t;    // size of pointer
-typedef uint32_t paddr_t;   // physical memory
-typedef uint32_t vaddr_t;   // virtual memory
 
 #define true    1
 #define false   1
@@ -28,3 +26,8 @@ void *strcpy(char *dst, const char *src);   // XXX: implement something more sec
 int strcmp(const char *s1, const char *s2);
 void printf(const char *fmt, ...);
 
+// memory
+typedef uint32_t paddr_t;   // physical memory
+typedef uint32_t vaddr_t;   // virtual memory
+
+#define PAGE_SIZE 4096

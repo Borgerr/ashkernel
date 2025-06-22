@@ -2,7 +2,11 @@
 #include "../common.h"
 #include "riscv.h"
 
-extern uint8_t __stack_top[];
+/*
+ * --------------------------------------------------------------------------------
+ * OpenSBI
+ * --------------------------------------------------------------------------------
+ */
 
 struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
 		long arg5, long fid, long eid)
@@ -30,6 +34,8 @@ struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
             : "memory");
     return (struct sbiret){.error = a0, .value = a1};
 }
+
+extern uint8_t __stack_top[];
 
 __attribute__((section(".text.boot")))
 __attribute__((naked))
@@ -60,8 +66,15 @@ void putchar(char ch)
     sbi_call(ch, 0, 0, 0, 0, 0, 0, 1); // EID = 0x01, arg 0 is ch
 }
 
+/*
+ * --------------------------------------------------------------------------------
+ * EXCEPTION HANDLING
+ * --------------------------------------------------------------------------------
+ */
+
 void handle_trap(struct trap_frame *f)
 {
+    // TODO: handle different exceptions
     uint32_t scause = READ_CSR(scause);
     uint32_t stval = READ_CSR(stval);
     uint32_t user_pc = READ_CSR(sepc);
@@ -154,5 +167,33 @@ void kernel_entry(void)
         "lw sp,  4 * 30(sp)\n"
         "sret\n"
     );
+}
+
+/*
+ * --------------------------------------------------------------------------------
+ * MEMORY MANAGEMENT
+ * --------------------------------------------------------------------------------
+ */
+extern char __free_ram[], __free_ram_end[];
+static paddr_t next_paddr = (paddr_t) __free_ram;
+
+paddr_t alloc_pages(uint32_t n)
+{
+    /*
+     * Allocates `n` pages
+     * Simple bump allocator for now.
+     * TODO: make more sophisticated-- we want eventual high memory utilization
+     * and ways to free pages.
+     * RISC-V also likely has some MMU utility we can wrangle here for S-Mode vs M-Mode.
+     */
+    paddr_t paddr = next_paddr;
+    next_paddr += n * PAGE_SIZE;
+
+    if (next_paddr > (paddr_t) __free_ram_end)
+        PANIC("out of memory");
+
+    // allocating newly allocated pages to 0 ensures consistency and security
+    memset((void *) paddr, 0, n * PAGE_SIZE);
+    return paddr;
 }
 

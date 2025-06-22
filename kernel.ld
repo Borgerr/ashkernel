@@ -29,6 +29,16 @@ SECTIONS {
     . = ALIGN(4);   /* address pointer 4B aligned */
     . += 128 * 1024; /* 128KB */
     __stack_top = .;
+
+    /*
+     * free memory for the kernel to allocate
+     * TODO: rely on UEFI/BIOS/OpenSBI etc for determining available memory regions
+     * after init
+     */
+    . = ALIGN(4096);
+    __free_ram = .;
+    . += 64 * 1024 * 1024;  /* 64MB, arbitrary, FIXME: come back to this and add more, possibly change for VM */
+    __free_ram_end = .;
 }
 
 /*
