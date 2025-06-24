@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../common.h"
+#include "kernel.h"
 
 /*
  * --------------------------------------------------------------------------------
@@ -95,4 +96,14 @@ void kernel_entry(void);
  */
 
 paddr_t alloc_pages(uint32_t n);    // paddr_t from common.h
+
+/*
+ * --------------------------------------------------------------------------------
+ * PROCESS MANAGEMENT
+ * --------------------------------------------------------------------------------
+ */
+
+void switch_context(uint32_t *prev_sp, uint32_t *next_sp);
+
+struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id);
 

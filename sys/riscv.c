@@ -197,3 +197,76 @@ paddr_t alloc_pages(uint32_t n)
     return paddr;
 }
 
+/*
+ * --------------------------------------------------------------------------------
+ * PROCESS MANAGEMENT
+ * --------------------------------------------------------------------------------
+ */
+
+__attribute__((naked))
+void switch_context(uint32_t *prev_sp, uint32_t *next_sp)
+{
+    /*
+     * Really dumb context switching mechanism where we save user's state on their kern_stack
+     * and then switch to another stack and continue execution.
+     * TODO: definitely want to change this to be more than swapping a stack pointer
+     */
+    __asm__ __volatile__(
+        // Save callee-saved registers onto the current process's stack.
+        "addi sp, sp, -13 * 4\n" // Allocate stack space for 13 4-byte registers
+        "sw ra,  0  * 4(sp)\n"   // Save callee-saved registers only
+        "sw s0,  1  * 4(sp)\n"
+        "sw s1,  2  * 4(sp)\n"
+        "sw s2,  3  * 4(sp)\n"
+        "sw s3,  4  * 4(sp)\n"
+        "sw s4,  5  * 4(sp)\n"
+        "sw s5,  6  * 4(sp)\n"
+        "sw s6,  7  * 4(sp)\n"
+        "sw s7,  8  * 4(sp)\n"
+        "sw s8,  9  * 4(sp)\n"
+        "sw s9,  10 * 4(sp)\n"
+        "sw s10, 11 * 4(sp)\n"
+        "sw s11, 12 * 4(sp)\n"
+
+        // Switch the stack pointer.
+        // REMEMBER: prev_sp and next_sp on stack as part of function invocation
+        "sw sp, (a0)\n"         // *prev_sp = sp;
+        "lw sp, (a1)\n"         // Switch stack pointer (sp) here
+
+        // Restore callee-saved registers from the next process's stack.
+        "lw ra,  0  * 4(sp)\n"  // Restore callee-saved registers only
+        "lw s0,  1  * 4(sp)\n"
+        "lw s1,  2  * 4(sp)\n"
+        "lw s2,  3  * 4(sp)\n"
+        "lw s3,  4  * 4(sp)\n"
+        "lw s4,  5  * 4(sp)\n"
+        "lw s5,  6  * 4(sp)\n"
+        "lw s6,  7  * 4(sp)\n"
+        "lw s7,  8  * 4(sp)\n"
+        "lw s8,  9  * 4(sp)\n"
+        "lw s9,  10 * 4(sp)\n"
+        "lw s10, 11 * 4(sp)\n"
+        "lw s11, 12 * 4(sp)\n"
+        "addi sp, sp, 13 * 4\n"  // We've popped 13 4-byte registers from the stack
+        "ret\n"
+    );
+}
+
+extern struct proc procs[];
+
+__attribute__((always_inline))
+struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id)
+{
+    // context stored on kernel stack
+    uint32_t *sp = (uint32_t *) &proc->kern_stack[sizeof(proc->kern_stack)];    // start at top of stack
+    for (int i = 0; i < 12; i++)    // initialize s11, s10, s9, s8, etc to 0
+        *--sp = 0;
+    *--sp = (uint32_t) pc;  // ra
+    
+    proc->pid = taken_id + 1;
+    proc->state = PROC_RUNNABLE;
+    proc->sp = (uint32_t) sp;
+
+    return proc;
+}
+

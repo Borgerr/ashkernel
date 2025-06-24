@@ -1,4 +1,5 @@
 #pragma once
+#include "../common.h"
 
 /*
  * kernel panics!
@@ -11,4 +12,21 @@
         printf("PANIC: %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);   \
         while (1) {}                                                            \
     } while (0)                                                                 \
+
+/*
+ * ----------------------------------------------------------------------------------
+ * PROCESS OBJECTS
+ * ----------------------------------------------------------------------------------
+ */
+
+#define PROCS_MAX       8
+#define PROC_UNUSED     0
+#define PROC_RUNNABLE   1
+
+struct proc {
+    int pid;
+    enum proc_state { UNUSED, RUNNABLE } state;
+    vaddr_t sp;
+    uint8_t kern_stack[8192];   // user's GPRs, ret addr, etc, as well as kernel's vars
+};
 
