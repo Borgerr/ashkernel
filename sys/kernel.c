@@ -37,18 +37,21 @@ void kernel_main(void)
 	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);  // set bss to 0 as a sanity check
     WRITE_CSR(stvec, (uint32_t) kernel_entry);
     //__asm__ __volatile__("unimp");    // uncomment to test exception handling
+    /*
     paddr_t paddr0 = alloc_pages(2);    // free_ram += 2 * 4096
     paddr_t paddr1 = alloc_pages(1);    // free_ram += 1 * 4096
     printf("paddr0: %x\n", paddr0);
     printf("paddr1: %x\n", paddr1);
+    */
 
-    paddr_t paddr_rest = alloc_pages(64); // should panic
+    paddr_t paddr_rest = alloc_pages(1 << 31); // should panic
     printf("paddr_rest, %x, was erroneously allowed to be evaluated\n", paddr_rest);
+    alloc_pages(1); // by itself -> 80232000
 
     proc_a = init_proc((uint32_t) proc_a_func);
     proc_b = init_proc((uint32_t) proc_b_func);
 
-    proc_a_func();
+    //proc_a_func();
 
 	for (;;)
         __asm__ __volatile__("wfi");    // FIXME: depends on riscv
@@ -86,11 +89,14 @@ paddr_t alloc_pages(uint32_t n)
      * TODO: make more sophisticated-- we want eventual high memory utilization
      * and ways to free pages.
      * RISC-V also likely has some MMU utility we can wrangle here for S-Mode vs M-Mode.
+     * Also always panics on invalid requests-- may want to propagate an "invalid request" sort of signal instead for
+     * a robust system.
      */
+    if (n * PAGE_SIZE == 0 && n != 0)
+        PANIC("requested number of pages (%x) causes an overflow");
+
     paddr_t paddr = next_paddr;
     next_paddr += n * PAGE_SIZE;
-
-    printf("next_paddr: %x\n", next_paddr);
 
     if (next_paddr > (paddr_t) __free_ram_end)
         PANIC("out of memory");
