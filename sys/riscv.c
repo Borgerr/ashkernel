@@ -171,36 +171,6 @@ void kernel_entry(void)
 
 /*
  * --------------------------------------------------------------------------------
- * MEMORY MANAGEMENT
- * --------------------------------------------------------------------------------
- */
-extern char __free_ram[], __free_ram_end[];
-static paddr_t next_paddr = (paddr_t) __free_ram;
-
-paddr_t alloc_pages(uint32_t n)
-{
-    /*
-     * Allocates `n` pages
-     * Simple bump allocator for now.
-     * TODO: make more sophisticated-- we want eventual high memory utilization
-     * and ways to free pages.
-     * RISC-V also likely has some MMU utility we can wrangle here for S-Mode vs M-Mode.
-     */
-    paddr_t paddr = next_paddr;
-    next_paddr += n * PAGE_SIZE;
-
-    printf("next_paddr: %x\n", next_paddr);
-
-    if (next_paddr > (paddr_t) __free_ram_end)
-        PANIC("out of memory");
-
-    // allocating newly allocated pages to 0 ensures consistency and security
-    memset((void *) paddr, 0, n * PAGE_SIZE);
-    return paddr;
-}
-
-/*
- * --------------------------------------------------------------------------------
  * PROCESS MANAGEMENT
  * --------------------------------------------------------------------------------
  */
