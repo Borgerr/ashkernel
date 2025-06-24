@@ -104,6 +104,14 @@ void yield(void)
 
     if (next == current_proc) return;   // circled around and selected self
 
+    // save ptr to bottom of kernel stack for current proc in sscratch
+    // for reading during exception handling
+        __asm__ __volatile__(
+        "csrw sscratch, %[sscratch]\n"
+        :
+        : [sscratch] "r" ((uint32_t) &next->kern_stack[sizeof(next->kern_stack)])
+    );
+
     // switch
     struct proc *prev = current_proc;
     current_proc = next;

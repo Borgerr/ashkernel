@@ -93,8 +93,13 @@ void kernel_entry(void)
      * MUST keep `struct trap_frame` with same order of registers
      * and must keep stack ptr set in a0 before calling `handle_trap`
      * to keep a valid trap_frame
+     *
+     * Requires 31 available words on a kernel stack.
+     * Does not support nested interrupt handling.
      */
     __asm__ __volatile__(
+        "csrrw sp, sscratch, sp\n"  // get kernel stack; swaps in one instruction
+
         "csrw sscratch, sp\n"
         "addi sp, sp, -4 * 31\n"
         "sw ra,  4 * 0(sp)\n"
@@ -128,8 +133,13 @@ void kernel_entry(void)
         "sw s10, 4 * 28(sp)\n"
         "sw s11, 4 * 29(sp)\n"
 
+        // stack pointer saved
         "csrr a0, sscratch\n"
         "sw a0, 4 * 30(sp)\n"
+
+        // change kernel stack
+        "addi a0, sp, 4 * 31\n"
+        "csrw sscratch, a0\n"
 
         "mv a0, sp\n"
         "call handle_trap\n"
