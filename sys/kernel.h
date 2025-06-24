@@ -39,4 +39,5 @@ struct proc {
 };
 
 struct proc *init_proc(uint32_t);
+void yield(void);
 

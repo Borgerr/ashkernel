@@ -6,70 +6,32 @@ extern uint8_t __bss[], __bss_end[];	// taken from kernel.ld
 
 struct proc procs[PROCS_MAX];
 
-void delay(void)
-{
-    for (int i = 0; i < 30000000; i++)
-        __asm__ __volatile__("nop");
-}
+struct proc *current_proc;
+struct proc *idle_proc;
+
+// testing procs and prototypes for testing context switching
 struct proc *proc_a;
 struct proc *proc_b;
-
-void proc_a_func(void)
-{
-    for (int i = 0; i < 300; i++) {
-        putchar('A');
-        switch_context(&proc_a->sp, &proc_b->sp);
-        delay();
-    }
-}
-
-void proc_b_func(void)
-{
-    for (int i = 0; i < 300; i++) {
-        putchar('B');
-        switch_context(&proc_b->sp, &proc_a->sp);
-        delay();
-    }
-}
+void proc_a_entry(void);
+void proc_b_entry(void);
 
 void kernel_main(void)
 {
 	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);  // set bss to 0 as a sanity check
     WRITE_CSR(stvec, (uint32_t) kernel_entry);
-    //__asm__ __volatile__("unimp");    // uncomment to test exception handling
-    /*
-    paddr_t paddr0 = alloc_pages(2);    // free_ram += 2 * 4096
-    paddr_t paddr1 = alloc_pages(1);    // free_ram += 1 * 4096
-    printf("paddr0: %x\n", paddr0);
-    printf("paddr1: %x\n", paddr1);
-    */
 
-    paddr_t paddr_rest = alloc_pages(1 << 31); // should panic
-    printf("paddr_rest, %x, was erroneously allowed to be evaluated\n", paddr_rest);
-    alloc_pages(1); // by itself -> 80232000
+    idle_proc = init_proc((uint32_t) NULL);
+    idle_proc->pid = 0;
+    current_proc = idle_proc;   // boot process context saved, can return to later
 
-    proc_a = init_proc((uint32_t) proc_a_func);
-    proc_b = init_proc((uint32_t) proc_b_func);
+    proc_a = init_proc((uint32_t) proc_a_entry);
+    proc_b = init_proc((uint32_t) proc_b_entry);
 
-    //proc_a_func();
+    yield();
+    PANIC("system is idle!");
 
 	for (;;)
         __asm__ __volatile__("wfi");    // FIXME: depends on riscv
-}
-
-struct proc *init_proc(uint32_t pc) // TODO: change to not rely on program counter
-{
-    struct proc *proc = NULL;
-    int taken_id;
-    for (taken_id = 0; taken_id < PROCS_MAX; taken_id++) {
-        if (procs[taken_id].state == PROC_UNUSED) {
-            proc = &procs[taken_id];
-            break;
-        }
-    }
-    if (!proc) PANIC("couldn't init proc, all procs in use");   // XXX: likely want to not panic
-
-    return init_proc_ctx(pc, proc, taken_id);
 }
 
 /*
@@ -104,5 +66,74 @@ paddr_t alloc_pages(uint32_t n)
     // allocating newly allocated pages to 0 ensures consistency and security
     memset((void *) paddr, 0, n * PAGE_SIZE);
     return paddr;
+}
+
+/*
+ * --------------------------------------------------------------------------------
+ * PROCESS MANAGEMENT
+ * --------------------------------------------------------------------------------
+ */
+
+struct proc *init_proc(uint32_t pc) // TODO: change to not rely on program counter
+{
+    struct proc *proc = NULL;
+    int taken_id;
+    for (taken_id = 0; taken_id < PROCS_MAX; taken_id++) {
+        if (procs[taken_id].state == PROC_UNUSED) {
+            proc = &procs[taken_id];
+            break;
+        }
+    }
+    if (!proc) PANIC("couldn't init proc, all procs in use");   // XXX: likely want to not panic
+
+    return init_proc_ctx(pc, proc, taken_id);
+}
+
+void yield(void)
+{
+    // search for a runnable proc
+    // simple round-robin, find next in circle after current proc, then run
+    struct proc *next = idle_proc;
+    for (int i = 0; i < PROCS_MAX; i++) {
+        struct proc *proc = &procs[(current_proc->pid + i) % PROCS_MAX];
+        if (proc->state == PROC_RUNNABLE && proc->pid > 0) {
+            next = proc;
+            break;
+        }
+    }
+
+    if (next == current_proc) return;   // circled around and selected self
+
+    // switch
+    struct proc *prev = current_proc;
+    current_proc = next;
+    switch_context(&prev->sp, &next->sp);
+}
+
+// testing functions
+void delay(void)
+{
+    for (int i = 0; i < 300000000; i++)
+        __asm__ __volatile__("nop");
+}
+
+void proc_a_entry(void)
+{
+    printf("starting proc A\n");
+    for (int i = 0; i < 300; i++) {
+        putchar('A');
+        yield();
+        delay();
+    }
+}
+
+void proc_b_entry(void)
+{
+    printf("starting process B\n");
+    for (int i = 0; i < 300; i++) {
+        putchar('B');
+        yield();
+        delay();
+    }
 }
 

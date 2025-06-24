@@ -79,7 +79,7 @@ void handle_trap(struct trap_frame *f)
     uint32_t stval = READ_CSR(stval);
     uint32_t user_pc = READ_CSR(sepc);
 
-    PANIC("\r\nUNHANDLED EXCEPTION: scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
+    PANIC("\r\nUNRECOGNIZED EXCEPTION: scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
 }
 
 __attribute__((naked))
