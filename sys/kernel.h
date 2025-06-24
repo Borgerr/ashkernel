@@ -30,3 +30,5 @@ struct proc {
     uint8_t kern_stack[8192];   // user's GPRs, ret addr, etc, as well as kernel's vars
 };
 
+struct proc *init_proc(uint32_t);
+

@@ -6,6 +6,32 @@ extern uint8_t __bss[], __bss_end[];	// taken from kernel.ld
 
 struct proc procs[PROCS_MAX];
 
+void delay(void)
+{
+    for (int i = 0; i < 30000000; i++)
+        __asm__ __volatile__("nop");
+}
+struct proc *proc_a;
+struct proc *proc_b;
+
+void proc_a_func(void)
+{
+    for (int i = 0; i < 300; i++) {
+        putchar('A');
+        switch_context(&proc_a->sp, &proc_b->sp);
+        delay();
+    }
+}
+
+void proc_b_func(void)
+{
+    for (int i = 0; i < 300; i++) {
+        putchar('B');
+        switch_context(&proc_b->sp, &proc_a->sp);
+        delay();
+    }
+}
+
 void kernel_main(void)
 {
 	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);  // set bss to 0 as a sanity check
@@ -16,7 +42,13 @@ void kernel_main(void)
     printf("paddr0: %x\n", paddr0);
     printf("paddr1: %x\n", paddr1);
 
-    paddr_t paddr_rest = alloc_pages(64 * 1024 * 1024); // should panic
+    paddr_t paddr_rest = alloc_pages(64); // should panic
+    printf("paddr_rest, %x, was erroneously allowed to be evaluated\n", paddr_rest);
+
+    proc_a = init_proc((uint32_t) proc_a_func);
+    proc_b = init_proc((uint32_t) proc_b_func);
+
+    proc_a_func();
 
 	for (;;)
         __asm__ __volatile__("wfi");    // FIXME: depends on riscv
@@ -34,6 +66,6 @@ struct proc *init_proc(uint32_t pc) // TODO: change to not rely on program count
     }
     if (!proc) PANIC("couldn't init proc, all procs in use");   // XXX: likely want to not panic
 
-    return init_proc_ctx(pc, proc, i);
+    return init_proc_ctx(pc, proc, taken_id);
 }
 

@@ -189,6 +189,8 @@ paddr_t alloc_pages(uint32_t n)
     paddr_t paddr = next_paddr;
     next_paddr += n * PAGE_SIZE;
 
+    printf("next_paddr: %x\n", next_paddr);
+
     if (next_paddr > (paddr_t) __free_ram_end)
         PANIC("out of memory");
 
