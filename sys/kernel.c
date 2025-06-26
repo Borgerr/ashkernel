@@ -74,6 +74,7 @@ paddr_t alloc_pages(uint32_t n)
  * --------------------------------------------------------------------------------
  */
 
+extern char __kernel_base[];
 struct proc *init_proc(uint32_t pc) // TODO: change to not rely on program counter
 {
     struct proc *proc = NULL;
@@ -85,7 +86,7 @@ struct proc *init_proc(uint32_t pc) // TODO: change to not rely on program count
         }
     }
     if (!proc) PANIC("couldn't init proc, all procs in use");   // XXX: likely want to not panic
-
+    
     return init_proc_ctx(pc, proc, taken_id);
 }
 
@@ -106,10 +107,15 @@ void yield(void)
 
     // save ptr to bottom of kernel stack for current proc in sscratch
     // for reading during exception handling
+    // XXX: do we want this in sys/riscv.c?
         __asm__ __volatile__(
+        "sfence.vma\n"
+        "csrw satp, %[satp]\n"
+        "sfence.vma\n"
         "csrw sscratch, %[sscratch]\n"
         :
-        : [sscratch] "r" ((uint32_t) &next->kern_stack[sizeof(next->kern_stack)])
+        : [satp] "r" (SATP_V32 | ((uint32_t) next->page_table / PAGE_SIZE)),
+          [sscratch] "r" ((uint32_t) &next->kern_stack[sizeof(next->kern_stack)])
     );
 
     // switch

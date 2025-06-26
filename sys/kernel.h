@@ -35,6 +35,7 @@ struct proc {
     int pid;
     enum proc_state { UNUSED, RUNNABLE } state;
     vaddr_t sp;
+    uint32_t *page_table;
     uint8_t kern_stack[8192];   // user's GPRs, ret addr, etc, as well as kernel's vars
 };
 

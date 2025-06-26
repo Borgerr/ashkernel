@@ -99,3 +99,18 @@ void switch_context(uint32_t *prev_sp, uint32_t *next_sp);
 
 struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id);
 
+/*
+ * --------------------------------------------------------------------------------
+ * SATP_V32 VIRTUAL MEMORY
+ * --------------------------------------------------------------------------------
+ */
+
+#define SATP_V32    (1u << 31)
+#define PAGE_V      (1 << 0)    // valid
+#define PAGE_R      (1 << 1)    // readable
+#define PAGE_W      (1 << 2)    // writable
+#define PAGE_X      (1 << 3)    // executable
+#define PAGE_U      (1 << 4)    // U-Mode accessible
+
+void map_page_sv32(uint32_t *table1, vaddr_t vaddr, paddr_t paddr, uint32_t flags);
+

@@ -235,6 +235,7 @@ void switch_context(uint32_t *prev_sp, uint32_t *next_sp)
 }
 
 extern struct proc procs[];
+extern char __kernel_base[], __free_ram_end[];
 
 __attribute__((always_inline))
 struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id)
@@ -244,11 +245,44 @@ struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id)
     for (int i = 0; i < 12; i++)    // initialize s11, s10, s9, s8, etc to 0
         *--sp = 0;
     *--sp = (uint32_t) pc;  // ra
+
+    uint32_t *page_table = (uint32_t *) alloc_pages(1);
+    for (paddr_t paddr = (paddr_t) __kernel_base;
+            paddr < (paddr_t) __free_ram_end; paddr += PAGE_SIZE)
+        map_page_sv32(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
     
     proc->pid = taken_id + 1;
     proc->state = PROC_RUNNABLE;
     proc->sp = (uint32_t) sp;
+    proc->page_table = page_table;
 
     return proc;
+}
+
+/*
+ * --------------------------------------------------------------------------------
+ * SATP_V32 VIRTUAL MEMORY
+ * --------------------------------------------------------------------------------
+ */
+
+void map_page_sv32(uint32_t *table1, vaddr_t vaddr, paddr_t paddr, uint32_t flags)
+{
+        if (!is_aligned(vaddr, PAGE_SIZE))
+        PANIC("unaligned vaddr %x", vaddr);
+
+    if (!is_aligned(paddr, PAGE_SIZE))
+        PANIC("unaligned paddr %x", paddr);
+
+    uint32_t vpn1 = (vaddr >> 22) & 0x3ff;
+    if ((table1[vpn1] & PAGE_V) == 0) {
+        // Create the 1st level page table if it doesn't exist.
+        uint32_t pt_paddr = alloc_pages(1);
+        table1[vpn1] = ((pt_paddr / PAGE_SIZE) << 10) | PAGE_V;
+    }
+
+    // Set the 2nd level page table entry to map the physical page.
+    uint32_t vpn0 = (vaddr >> 12) & 0x3ff;
+    uint32_t *table0 = (uint32_t *) ((table1[vpn1] >> 10) * PAGE_SIZE);
+    table0[vpn0] = ((paddr / PAGE_SIZE) << 10) | flags | PAGE_V;
 }
 

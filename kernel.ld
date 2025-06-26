@@ -3,6 +3,7 @@ ENTRY(boot)
 SECTIONS {
     . = 0x80200000; /* base address */
     /* . symbol is "current address", increments as data is placed, e.g. *(.text) */
+    __kernel_base = .;
 
     .text :{   /* .text.boot placed at beginning */
         KEEP(*(.text.boot));
