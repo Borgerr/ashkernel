@@ -114,3 +114,5 @@ struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id);
 
 void map_page_sv32(uint32_t *table1, vaddr_t vaddr, paddr_t paddr, uint32_t flags);
 
+void save_kern_state(struct proc *next);
+

@@ -53,6 +53,8 @@ paddr_t alloc_pages(uint32_t n)
      * RISC-V also likely has some MMU utility we can wrangle here for S-Mode vs M-Mode.
      * Also always panics on invalid requests-- may want to propagate an "invalid request" sort of signal instead for
      * a robust system.
+     *
+     * XXX: should this go in riscv.c?
      */
     if (n * PAGE_SIZE == 0 && n != 0)
         PANIC("requested number of pages (%x) causes an overflow");
@@ -105,18 +107,7 @@ void yield(void)
 
     if (next == current_proc) return;   // circled around and selected self
 
-    // save ptr to bottom of kernel stack for current proc in sscratch
-    // for reading during exception handling
-    // XXX: do we want this in sys/riscv.c?
-        __asm__ __volatile__(
-        "sfence.vma\n"
-        "csrw satp, %[satp]\n"
-        "sfence.vma\n"
-        "csrw sscratch, %[sscratch]\n"
-        :
-        : [satp] "r" (SATP_V32 | ((uint32_t) next->page_table / PAGE_SIZE)),
-          [sscratch] "r" ((uint32_t) &next->kern_stack[sizeof(next->kern_stack)])
-    );
+    save_kern_state(next);
 
     // switch
     struct proc *prev = current_proc;
@@ -124,6 +115,7 @@ void yield(void)
     switch_context(&prev->sp, &next->sp);
 }
 
+//  ---------------------------
 // testing functions
 void delay(void)
 {
@@ -150,4 +142,6 @@ void proc_b_entry(void)
         delay();
     }
 }
+
+//  ---------------------------
 

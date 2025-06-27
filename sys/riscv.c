@@ -286,3 +286,17 @@ void map_page_sv32(uint32_t *table1, vaddr_t vaddr, paddr_t paddr, uint32_t flag
     table0[vpn0] = ((paddr / PAGE_SIZE) << 10) | flags | PAGE_V;
 }
 
+__attribute__((always_inline))
+void save_kern_state(struct proc* next)
+{
+    __asm__ __volatile__(
+        "sfence.vma\n"
+        "csrw satp, %[satp]\n"
+        "sfence.vma\n"
+        "csrw sscratch, %[sscratch]\n"
+        :
+        : [satp] "r" (SATP_V32 | ((uint32_t) next->page_table / PAGE_SIZE)),
+          [sscratch] "r" ((uint32_t) &next->kern_stack[sizeof(next->kern_stack)])
+    );
+}
+
