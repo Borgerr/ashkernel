@@ -1,33 +1,61 @@
-# Makefile
-
-# Variables
 CC = clang
 QEMU = qemu-system-riscv32
-CFLAGS = -std=c11 -O2 -g3 -Wall -Wextra --target=riscv32-unknown-elf -fno-stack-protector -ffreestanding -nostdlib
-LDFLAGS = -Wl,-Tkernel.ld -Wl,-Map=kernel.map
-OUTPUT = kernel.elf
-SRC = sys/*.c common.c
+OBJCOPY = /usr/bin/llvm-objcopy
+
+CFLAGS = -std=c11 -O2 -g3 -Wall -Wextra --target=riscv32-unknown-elf \
+         -fno-stack-protector -ffreestanding -nostdlib
+
+# Kernel build
+KERNEL_LDFLAGS = -Wl,-Tkernel.ld -Wl,-Map=kernel.map
+KERNEL_SRC = sys/*.c common.c shell.bin.o
+KERNEL_ELF = kernel.elf
+
+# User build
+USER_LDFLAGS = -Wl,-Tuserspace.ld -Wl,-Map=shell.map
+USER_SRC = apps/*.c common.c user/*.c
+USER_ELF = shell.elf
+USER_BIN = shell.bin
+USER_BIN_O = shell.bin.o
 
 # Default target
-all: elf
+all: $(KERNEL_ELF)
 
-# Build the ELF binary
-elf: $(SRC) kernel.ld
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(OUTPUT) $(SRC)
+# Kernel ELF depends on shell binary object (user program embedded)
+$(KERNEL_ELF): $(KERNEL_SRC) kernel.ld $(USER_BIN_O)
+	$(CC) $(CFLAGS) $(KERNEL_LDFLAGS) -o $@ $(KERNEL_SRC)
 
-# Run the ELF binary with QEMU
-run: elf
+# Build user ELF, binary, and binary object
+$(USER_BIN_O): $(USER_ELF)
+	$(OBJCOPY) --set-section-flags .bss=alloc,contents -O binary $< $(USER_BIN)
+	$(OBJCOPY) -Ibinary -Oelf32-littleriscv $(USER_BIN) $@
+
+$(USER_ELF): $(USER_SRC) userspace.ld
+	$(CC) $(CFLAGS) $(USER_LDFLAGS) -o $@ $(USER_SRC)
+
+# Targets
+app: $(USER_ELF) $(USER_BIN_O)
+kern_elf: $(KERNEL_ELF)
+
+run-user: all
 	$(QEMU) \
 		-machine virt \
 		-bios default \
 		-serial mon:stdio \
 		--no-reboot \
 		-nographic \
-		-kernel kernel.elf
+		-kernel $(KERNEL_ELF)
 
-# Clean build artifacts
+run-no-user: kern_elf
+	$(QEMU) \
+		-machine virt \
+		-bios default \
+		-serial mon:stdio \
+		--no-reboot \
+		-nographic \
+		-kernel $(KERNEL_ELF)
+
 clean:
-	rm -f $(OUTPUT) kernel.map
+	rm -f *.bin *.bin.o *.elf *.map
 
-.PHONY: all elf run clean
+.PHONY: all clean app kern_elf run-user run-no-user
 

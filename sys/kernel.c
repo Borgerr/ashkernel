@@ -15,6 +15,10 @@ struct proc *proc_b;
 void proc_a_entry(void);
 void proc_b_entry(void);
 
+// checking loaded shell
+extern char _binary_shell_bin_start[];
+extern char _binary_shell_bin_size[];
+
 void kernel_main(void)
 {
 	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);  // set bss to 0 as a sanity check
@@ -24,11 +28,14 @@ void kernel_main(void)
     idle_proc->pid = 0;
     current_proc = idle_proc;   // boot process context saved, can return to later
 
+    /*
     proc_a = init_proc((uint32_t) proc_a_entry);
     proc_b = init_proc((uint32_t) proc_b_entry);
+    */
 
-    yield();
-    PANIC("system is idle!");
+    uint8_t *shell_bin = (uint8_t *) _binary_shell_bin_start;
+    printf("size: %d\n", (int) _binary_shell_bin_size);
+    printf("*shell_bin: %x", *shell_bin);
 
 	for (;;)
         __asm__ __volatile__("wfi");    // FIXME: depends on riscv
