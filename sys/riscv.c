@@ -237,9 +237,17 @@ void switch_context(uint32_t *prev_sp, uint32_t *next_sp)
 extern struct proc procs[];
 extern char __kernel_base[], __free_ram_end[];
 
+__attribute__((naked))
 void user_entry(void)
 {
-    PANIC("implement!");
+    __asm__ __volatile__(
+        "csrw sepc, %[sepc]         \n" // sepc sets pc when switching to U-Mode
+        "csrw sstatus, %[sstatus]   \n" // hardware interrupts enabled (SSTATUS_SPIE bit)
+        "sret                       \n"
+        :
+        : [sepc] "r" (USER_BASE),       // TODO: change this to be a parameter or something
+          [sstatus] "r" (SSTATUS_SPIE)
+    );
 }
 
 __attribute__((always_inline))

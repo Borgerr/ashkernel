@@ -58,7 +58,7 @@ paddr_t alloc_pages(uint32_t n)
     /*
      * Allocates `n` pages
      * Simple bump allocator for now.
-     * TODO: make more sophisticated-- we want eventual high memory utilization
+     * TODO: make more sophisticated-- we want high memory utilization
      * and ways to free pages.
      * RISC-V also likely has some MMU utility we can wrangle here for S-Mode vs M-Mode.
      * Also always panics on invalid requests-- may want to propagate an "invalid request" sort of signal instead for

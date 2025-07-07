@@ -49,4 +49,5 @@ void yield(void);
  */
 
 #define USER_BASE 0x1000000     // needs to match userspace.ld
+#define SSTATUS_SPIE (1 << 5)   // sstatus register SPIE bit controls U-Mode
 
