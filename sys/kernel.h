@@ -39,6 +39,14 @@ struct proc {
     uint8_t kern_stack[8192];   // user's GPRs, ret addr, etc, as well as kernel's vars
 };
 
-struct proc *init_proc(uint32_t);
+struct proc *init_proc(const void* image, size_t image_size);
 void yield(void);
+
+/*
+ * ----------------------------------------------------------------------------------
+ * USER MODE
+ * ----------------------------------------------------------------------------------
+ */
+
+#define USER_BASE 0x1000000     // needs to match userspace.ld
 

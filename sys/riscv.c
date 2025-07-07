@@ -237,24 +237,22 @@ void switch_context(uint32_t *prev_sp, uint32_t *next_sp)
 extern struct proc procs[];
 extern char __kernel_base[], __free_ram_end[];
 
+void user_entry(void)
+{
+    PANIC("implement!");
+}
+
 __attribute__((always_inline))
-struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id)
+struct proc *init_proc_ctx(struct proc *proc, const void *image, size_t image_size)
 {
     // context stored on kernel stack
     uint32_t *sp = (uint32_t *) &proc->kern_stack[sizeof(proc->kern_stack)];    // start at top of stack
     for (int i = 0; i < 12; i++)    // initialize s11, s10, s9, s8, etc to 0
         *--sp = 0;
-    *--sp = (uint32_t) pc;  // ra
+    *--sp = (uint32_t) (uint32_t) user_entry;  // ra (returns to user_entry function in kernel)
 
-    uint32_t *page_table = (uint32_t *) alloc_pages(1);
-    for (paddr_t paddr = (paddr_t) __kernel_base;
-            paddr < (paddr_t) __free_ram_end; paddr += PAGE_SIZE)
-        map_page_sv32(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
     
-    proc->pid = taken_id + 1;
-    proc->state = PROC_RUNNABLE;
     proc->sp = (uint32_t) sp;
-    proc->page_table = page_table;
 
     return proc;
 }
@@ -267,14 +265,15 @@ struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id)
 
 void map_page_sv32(uint32_t *table1, vaddr_t vaddr, paddr_t paddr, uint32_t flags)
 {
-        if (!is_aligned(vaddr, PAGE_SIZE))
+    //printf("mapping page in table1 %x with vaddr %x, paddr %x, and flags %x\n", table1, vaddr, paddr, flags);
+    if (!is_aligned(vaddr, PAGE_SIZE))
         PANIC("unaligned vaddr %x", vaddr);
 
     if (!is_aligned(paddr, PAGE_SIZE))
         PANIC("unaligned paddr %x", paddr);
 
     uint32_t vpn1 = (vaddr >> 22) & 0x3ff;
-    if ((table1[vpn1] & PAGE_V) == 0) {
+    if (!(table1[vpn1] & PAGE_V)) {
         // Create the 1st level page table if it doesn't exist.
         uint32_t pt_paddr = alloc_pages(1);
         table1[vpn1] = ((pt_paddr / PAGE_SIZE) << 10) | PAGE_V;

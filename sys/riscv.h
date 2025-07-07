@@ -97,7 +97,7 @@ void kernel_entry(void);
 
 void switch_context(uint32_t *prev_sp, uint32_t *next_sp);
 
-struct proc *init_proc_ctx(uint32_t pc, struct proc *proc, int taken_id);
+struct proc *init_proc_ctx(struct proc *proc, const void *image, size_t image_size);
 
 /*
  * --------------------------------------------------------------------------------
