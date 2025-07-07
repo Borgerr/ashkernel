@@ -138,6 +138,9 @@ void yield(void)
 {
     // search for a runnable proc
     // simple round-robin, find next in circle after current proc, then run
+    // currently must be called at startup as process 0 is the idle process
+    // and we want to move on to an actual process.
+    // Essentially, to run actual user processes, need to yield the idle process.
     struct proc *next = idle_proc;
     for (int i = 0; i < PROCS_MAX; i++) {
         struct proc *proc = &procs[(current_proc->pid + i) % PROCS_MAX];
