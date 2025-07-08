@@ -116,3 +116,11 @@ void map_page_sv32(uint32_t *table1, vaddr_t vaddr, paddr_t paddr, uint32_t flag
 
 void save_kern_state(struct proc *next);
 
+/*
+ * --------------------------------------------------------------------------------
+ * SYSCALLS
+ * --------------------------------------------------------------------------------
+ */
+
+#define SCAUSE_ECALL 8  // defined by RISC-V standard
+

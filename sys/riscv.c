@@ -72,6 +72,18 @@ void putchar(char ch)
  * --------------------------------------------------------------------------------
  */
 
+void handle_syscall(struct trap_frame *f)
+{
+    switch (f->a3) {    // syscall ID
+        case SYS_PUTCHAR:
+            putchar(f->a0);     // actual arg (XXX: definitely didn't check ;^) make this safe!)
+            break;
+        default:
+            PANIC("unexpected syscall a3=%x\n", f->a3);
+            break;
+    }
+}
+
 void handle_trap(struct trap_frame *f)
 {
     // TODO: handle different exceptions
@@ -79,7 +91,20 @@ void handle_trap(struct trap_frame *f)
     uint32_t stval = READ_CSR(stval);
     uint32_t user_pc = READ_CSR(sepc);
 
-    PANIC("\r\nUNRECOGNIZED EXCEPTION: scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
+    printf("\n\nscause: %x, SCAUSE_ECALL: %x\n\n", scause, SCAUSE_ECALL);
+
+    switch (scause) {
+        case SCAUSE_ECALL:
+            printf("SCAUSE_ECALL trap\n");
+            handle_syscall(f);
+            user_pc += 4;       // move past syscall invocation
+            break;
+        default:
+            PANIC("\r\nUNRECOGNIZED EXCEPTION: scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
+            break;
+    }
+
+    WRITE_CSR(sepc, user_pc);
 }
 
 __attribute__((naked))
@@ -273,7 +298,6 @@ struct proc *init_proc_ctx(struct proc *proc, const void *image, size_t image_si
 
 void map_page_sv32(uint32_t *table1, vaddr_t vaddr, paddr_t paddr, uint32_t flags)
 {
-    //printf("mapping page in table1 %x with vaddr %x, paddr %x, and flags %x\n", table1, vaddr, paddr, flags);
     if (!is_aligned(vaddr, PAGE_SIZE))
         PANIC("unaligned vaddr %x", vaddr);
 

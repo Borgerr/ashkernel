@@ -37,8 +37,6 @@ void kernel_main(void)
     proc_b = init_proc((uint32_t) proc_b_entry);
 
     uint8_t *shell_bin = (uint8_t *) _binary_shell_bin_start;
-    printf("size: %d\n", (int) _binary_shell_bin_size);
-    printf("*shell_bin: %x", *shell_bin);
     */
 
 	for (;;)
@@ -79,7 +77,6 @@ paddr_t alloc_pages(uint32_t n)
     // allocating newly allocated pages to 0 ensures consistency and security
     memset((void *) paddr, 0, n * PAGE_SIZE);
 
-    printf("allocated page %x\n", paddr);
     return paddr;
 }
 

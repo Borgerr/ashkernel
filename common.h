@@ -32,3 +32,6 @@ typedef uint32_t paddr_t;   // physical memory
 typedef uint32_t vaddr_t;   // virtual memory
 
 #define PAGE_SIZE 4096
+
+// syscall stuff
+#define SYS_PUTCHAR 1

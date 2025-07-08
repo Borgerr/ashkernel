@@ -2,6 +2,7 @@
 
 void main(void)
 {
-    *((volatile int *) 0x80200000) = 0x1234;    // should trap
+    putchar('a');
+    printf("oh my fucking god it's a user process\n");
     for (;;) ;
 }
