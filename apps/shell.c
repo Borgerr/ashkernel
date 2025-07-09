@@ -1,8 +1,9 @@
-#include "../user/user.h"    // TODO: figure out a better organization for this file structure
+#include "../common.h"
 
 void main(void)
 {
-    putchar('a');
+    // TODO: print stack pointer throughout program
+    //putchar('a');
     printf("oh my fucking god it's a user process\n");
     for (;;) ;
 }

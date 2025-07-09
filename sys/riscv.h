@@ -122,5 +122,10 @@ void save_kern_state(struct proc *next);
  * --------------------------------------------------------------------------------
  */
 
-#define SCAUSE_ECALL 8  // defined by RISC-V standard
+// https://drive.google.com/file/d/17GeetSnT5wW3xNuAHI95-SI1gPGd5sJ_/view
+// ^^^ page 124, section 12.1
+// RISC-V specs seem to change locations over time so check the website
+#define SCAUSE_ECALL 0x8        // environment call from U-Mode
+#define SCAUSE_SFALT 0xF        // store/AMO page fault
+#define SCAUSE_LFALT 0xD        // load page fault
 

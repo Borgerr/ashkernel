@@ -91,13 +91,20 @@ void handle_trap(struct trap_frame *f)
     uint32_t stval = READ_CSR(stval);
     uint32_t user_pc = READ_CSR(sepc);
 
-    printf("\n\nscause: %x, SCAUSE_ECALL: %x\n\n", scause, SCAUSE_ECALL);
+    //printf("\n\nscause: %x, SCAUSE_ECALL: %x\n\n", scause, SCAUSE_ECALL);
 
     switch (scause) {
         case SCAUSE_ECALL:
-            printf("SCAUSE_ECALL trap\n");
+            //printf("SCAUSE_ECALL trap\n");
             handle_syscall(f);
             user_pc += 4;       // move past syscall invocation
+            break;
+        case SCAUSE_LFALT:
+            PANIC("PAGE LOAD FAULT!!! paging is not yet implemented.\noffending instr at addr %x tried accessing %x\n\n", user_pc, stval);
+            break;
+        case SCAUSE_SFALT:
+            // TODO: come back to this when we plan on supporting paging
+            PANIC("PAGE STORE FAULT!!! paging is not yet implemented.\noffending instr at addr %x tried accessing %x\n\n", user_pc, stval);
             break;
         default:
             PANIC("\r\nUNRECOGNIZED EXCEPTION: scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
