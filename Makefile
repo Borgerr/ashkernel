@@ -1,5 +1,6 @@
 CC = clang
 QEMU = qemu-system-riscv32
+GDB = gdb
 OBJCOPY = /usr/bin/llvm-objcopy
 
 CFLAGS = -std=c11 -O2 -g3 -Wall -Wextra --target=riscv32-unknown-elf \
@@ -11,6 +12,7 @@ KERNEL_SRC = sys/*.c common.c shell.bin.o
 KERNEL_ELF = kernel.elf
 
 # User build
+# TODO: come back to this ofc
 USER_LDFLAGS = -Wl,-Tuserspace.ld -Wl,-Map=shell.map
 USER_SRC = apps/*.c common.c user/*.c
 USER_ELF = shell.elf
@@ -44,6 +46,20 @@ run-user: all
 		--no-reboot \
 		-nographic \
 		-kernel $(KERNEL_ELF)
+
+debug-user: all
+	# https://www.qemu.org/docs/master/system/gdb.html
+	# TODO: should figure out how to kill background on make kill
+	$(QEMU) -s -S \
+		-machine virt \
+		-bios default \
+		-serial mon:stdio \
+		--no-reboot \
+		-nographic \
+		-kernel $(KERNEL_ELF) \
+		&
+
+	$(GDB) $(KERNEL_ELF) -ex "symbol-file shell.elf" -ex "target remote localhost:1234"	# TODO: come back to this
 
 run-no-user: kern_elf
 	$(QEMU) \
