@@ -38,6 +38,7 @@ int syscall(int sysno, int arg0, int arg1, int arg2)
     register int a2 __asm__("a2") = arg2;
     register int a3 __asm__("a3") = sysno;
 
+    // TODO: BUG here when calling. Does not restore stack pointer.
     __asm__ __volatile__("ecall"
             : "=r"(a0)
             : "r"(a0), "r"(a1), "r"(a2), "r"(a3)
