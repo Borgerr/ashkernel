@@ -53,6 +53,17 @@ void boot(void)
 	);
 }
 
+long getchar(void)
+{
+    /*
+     * long abi_console_getchar(void);
+     * Read a byte from debug console.
+     * Returns byte on success, -1 on failure.
+     */
+    struct sbiret ret = sbi_call(0, 0, 0, 0, 0, 0, 0, SYS_GETCHAR);
+    return ret.error;
+}
+
 void putchar(char ch)
 {
     /*
@@ -63,7 +74,7 @@ void putchar(char ch)
      * Follows SBI calling conventions
      * EID 0x01
      */
-    sbi_call(ch, 0, 0, 0, 0, 0, 0, 1); // EID = 0x01, arg 0 is ch
+    sbi_call(ch, 0, 0, 0, 0, 0, 0, SYS_PUTCHAR); // EID = 0x01, arg 0 is ch
 }
 
 /*
@@ -72,14 +83,33 @@ void putchar(char ch)
  * --------------------------------------------------------------------------------
  */
 
+extern volatile struct proc *current_proc;
 void handle_syscall(struct trap_frame *f)
 {
     switch (f->a3) {    // syscall ID
         case SYS_PUTCHAR:
             putchar(f->a0);     // actual arg (XXX: definitely didn't check ;^) make this safe!)
             break;
+        case SYS_GETCHAR:
+            while (1) {
+                long ch = getchar();
+                if (ch >= 0) {
+                    f->a0 = ch;
+                    break;
+                }
+                yield();        // yield on I/O
+            }
+            break;
+        case SYS_EXIT:
+            int pid = current_proc->pid;
+            printf("process %d exited\n", pid);
+            current_proc->state = EXITED;
+            yield();
+
+            // if this is ever reached, something is severely broken
+            PANIC("proc with pid %d resumed execution when it was meant for exiting\n");
         default:
-            PANIC("unexpected syscall a3=%x\n", f->a3);
+            PANIC("unrecognized syscall a3=%x\n", f->a3);
             break;
     }
 }

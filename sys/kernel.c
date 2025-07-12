@@ -39,6 +39,8 @@ void kernel_main(void)
     uint8_t *shell_bin = (uint8_t *) _binary_shell_bin_start;
     */
 
+    printf("nothing is running. it sure is boring around here.\n");
+
 	for (;;)
         __asm__ __volatile__("wfi");    // FIXME: depends on riscv
 }
@@ -93,7 +95,7 @@ struct proc *init_proc(const void *image, size_t image_size)
     struct proc *proc = NULL;
     int taken_id;
     for (taken_id = 0; taken_id < PROCS_MAX; taken_id++) {
-        if (procs[taken_id].state == PROC_UNUSED) {
+        if (procs[taken_id].state == UNUSED) {
             proc = &procs[taken_id];
             break;
         }
@@ -125,7 +127,7 @@ struct proc *init_proc(const void *image, size_t image_size)
     }
 
     proc->page_table = page_table;
-    proc->state = PROC_RUNNABLE;
+    proc->state = RUNNABLE;
     proc->page_table = page_table;
 
     return proc;
@@ -141,7 +143,7 @@ void yield(void)
     struct proc *next = idle_proc;
     for (int i = 0; i < PROCS_MAX; i++) {
         struct proc *proc = &procs[(current_proc->pid + i) % PROCS_MAX];
-        if (proc->state == PROC_RUNNABLE && proc->pid > 0) {
+        if (proc->state == RUNNABLE && proc->pid > 0) {
             next = proc;
             break;
         }

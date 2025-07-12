@@ -28,12 +28,10 @@ paddr_t alloc_pages(uint32_t n);    // paddr_t from common.h
  */
 
 #define PROCS_MAX       8
-#define PROC_UNUSED     0
-#define PROC_RUNNABLE   1
 
 struct proc {
     int pid;
-    enum proc_state { UNUSED, RUNNABLE } state;
+    enum proc_state { UNUSED, RUNNABLE, EXITED } state;
     vaddr_t sp;
     uint32_t *page_table;
     uint8_t kern_stack[8192];   // user's GPRs, ret addr, etc, as well as kernel's vars

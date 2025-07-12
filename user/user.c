@@ -4,7 +4,16 @@ extern char __stack_top[];
 
 __attribute__((noreturn)) void exit(void)
 {
-    for (;;) ;  // XXX: terminate application
+    syscall(SYS_EXIT, 0, 0, 0);
+    for (;;)    
+        printf("process didn't exit!!!\n");     // XXX: hopefully this isn't reached.
+                                                // if it is, include a better log mechanism
+                                                // or better yet, include the mech before it does
+}
+
+long getchar(void)
+{
+    return syscall(SYS_GETCHAR, 0, 0, 0);
 }
 
 void putchar(char c)

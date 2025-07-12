@@ -24,7 +24,11 @@ void *memset(void *buf, char c, size_t n);
 void *memcpy(void *dst, const void *src, size_t n);
 void *strcpy(char *dst, const char *src);   // XXX: implement something more secure
 int strcmp(const char *s1, const char *s2);
-void putchar(char ch);
+
+// user I/O
+// XXX: S-Mode - M-Mode interaction currently relies on debug buffers
+void putchar(char ch);  // XXX: do we want this to return a long?
+long getchar(void);
 void printf(const char *fmt, ...);
 
 // memory
@@ -34,4 +38,6 @@ typedef uint32_t vaddr_t;   // virtual memory
 #define PAGE_SIZE 4096
 
 // syscall stuff
-#define SYS_PUTCHAR 1
+#define SYS_PUTCHAR     1
+#define SYS_GETCHAR     2
+#define SYS_EXIT        3
