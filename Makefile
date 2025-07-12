@@ -59,7 +59,7 @@ debug-user: all
 		-kernel $(KERNEL_ELF) \
 		&
 
-	$(GDB) $(KERNEL_ELF) -ex "symbol-file shell.elf" -ex "target remote localhost:1234"	# TODO: come back to this
+	$(GDB) $(KERNEL_ELF) -ex "add-symbol-file shell.elf 0x1000000" -ex "target remote localhost:1234"	# TODO: come back to this
 
 run-no-user: kern_elf
 	$(QEMU) \
