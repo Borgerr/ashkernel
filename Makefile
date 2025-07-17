@@ -39,12 +39,22 @@ app: $(USER_ELF) $(USER_BIN_O)
 kern_elf: $(KERNEL_ELF)
 
 run-user: all
+	# XXX:
+	# HIGHLY dependent on this ONE specific setup.
+	# Other architectures will likely need different build commands, etc
+	# Note that `./something.txt` is the disk image
+	# and we use virtio over memory mapped I/O
+	#
+	# virtio spec:
+	# https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html
 	$(QEMU) \
 		-machine virt \
 		-bios default \
 		-serial mon:stdio \
 		--no-reboot \
 		-nographic \
+		-drive id=drive0,file=something.txt,format=raw,if=none \
+		-device virtio-blk-device,drive=drive0,bus=virtio-mmio-bus.0 \
 		-kernel $(KERNEL_ELF)
 
 debug-user: all
