@@ -33,10 +33,17 @@ Goals, and reaching them, may be altered depending on my time availability.
 Right now I'd like to keep this list relatively short, but may add another file
 if I start getting loads of ideas I want to implement.
 
-- [ ] Implement a basic file system over disk I/O
+- [x] Implement a basic file system over disk I/O
 - [ ] Implement a UDP stack (TCP would also be nice, but more complicated)
 - [ ] More sophisticated memory management beyond bump allocation
 - [ ] Dynamically load processes
 - [ ] Disk interrupt handling
 - [ ] x86_64 support (maybe more generally, boot on real hardware)
+
+#### Resources
+
+A big thank you to [OS in 1k lines](<https://operating-system-in-1000-lines.vercel.app/en/17-outro>),
+[RISC-V
+spec](<https://lf-riscv.atlassian.net/wiki/spaces/HOME/pages/16154769/RISC-V+Technical+Specifications>),
+and [Anton Burtsev at the University of Utah](<https://mars-research.github.io/aburtsev/>).
 
