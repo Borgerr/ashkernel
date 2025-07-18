@@ -48,10 +48,11 @@ void yield(void);
 
 #define USER_BASE 0x1000000     // needs to match userspace.ld
 #define SSTATUS_SPIE (1 << 5)   // sstatus register SPIE bit controls U-Mode
+#define SSTATUS_SUM  (1 << 18)  // SUM bit allows for supervisor to read user memory
 
 /*
  * ----------------------------------------------------------------------------------
- * FILE SYSTEM
+ * VIRTIO DISK I/O
  * ----------------------------------------------------------------------------------
  */
 // XXX: ABSOLUTELY bullshitted.
@@ -132,4 +133,46 @@ struct virtio_blk_req {
     uint8_t data[512];
     uint8_t status;
 } __attribute__((packed));
+
+/*
+ * ----------------------------------------------------------------------------------
+ * FILE SYSTEM
+ * ----------------------------------------------------------------------------------
+ */
+
+#define FILES_MAX       2
+#define DISK_MAX_SIZE   align_up(sizeof(struct file) * FILES_MAX, SECTOR_SIZE)
+// currently all disks are read into memory at boot
+// this is a very tiny OS!
+
+struct tar_header {
+    char name[100];
+    char mode[8];
+    char uid[8];
+    char gid[8];
+    char size[12];
+    char mtime[12];
+    char checksum[8];
+    char type;
+    char linkname[100];
+    char magic[6];
+    char version[2];
+    char uname[32];
+    char gname[32];
+    char devmajor[8];
+    char devminor[8];
+    char prefix[155];
+    char padding[12];
+    char data[];
+} __attribute__((packed));
+
+struct file {
+    bool in_use;
+    char name[100];
+    char data[1024];    // TODO: do we want variable length?
+    size_t size;
+};
+
+void fs_flush(void);
+struct file *fs_lookup(const char *filename);
 

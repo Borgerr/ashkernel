@@ -90,6 +90,7 @@ void handle_syscall(struct trap_frame *f)
         case SYS_PUTCHAR:
             putchar(f->a0);     // actual arg (XXX: definitely didn't check ;^) make this safe!)
             break;
+
         case SYS_GETCHAR:
             while (1) {
                 long ch = getchar();
@@ -100,6 +101,7 @@ void handle_syscall(struct trap_frame *f)
                 yield();        // yield on I/O
             }
             break;
+
         case SYS_EXIT:
             int pid = current_proc->pid;
             printf("process %d exited\n", pid);
@@ -108,6 +110,31 @@ void handle_syscall(struct trap_frame *f)
 
             // if this is ever reached, something is severely broken
             PANIC("proc with pid %d resumed execution when it was meant for exiting\n");
+
+        case SYS_READFILE:
+        case SYS_WRITEFILE:
+            const char *filename = (const char *) f->a0;
+            char *buf = (char *) f->a1;
+            int len = f->a2;
+            struct file *file = fs_lookup(filename);
+            if (!file) {
+                printf("file not found: %s\n", filename);
+                f->a0 = -1;
+                break;
+            }
+            if (len > (int) sizeof(file->data))
+                len = file->size;
+            if (f->a3 == SYS_WRITEFILE) {
+                memcpy(file->data, buf, len);
+                file->size = len;
+                fs_flush();
+            } else {
+                memcpy(buf, file->data, len);
+            }
+
+            f->a0 = len;
+            break;
+
         default:
             PANIC("unrecognized syscall a3=%x\n", f->a3);
             break;
@@ -129,13 +156,16 @@ void handle_trap(struct trap_frame *f)
             handle_syscall(f);
             user_pc += 4;       // move past syscall invocation
             break;
+
         case SCAUSE_LFALT:
             PANIC("PAGE LOAD FAULT!!! paging is not yet implemented.\noffending instr at addr %x tried accessing %x\n\n", user_pc, stval);
             break;
+
         case SCAUSE_SFALT:
             // TODO: come back to this when we plan on supporting paging
             PANIC("PAGE STORE FAULT!!! paging is not yet implemented.\noffending instr at addr %x tried accessing %x\n\n", user_pc, stval);
             break;
+
         default:
             PANIC("\r\nUNRECOGNIZED EXCEPTION: scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
             break;
@@ -307,7 +337,7 @@ void user_entry(void)
         "sret                       \n"
         :
         : [sepc] "r" (USER_BASE),       // TODO: change this to be a parameter or something
-          [sstatus] "r" (SSTATUS_SPIE)
+          [sstatus] "r" (SSTATUS_SPIE | SSTATUS_SUM)
     );
 }
 

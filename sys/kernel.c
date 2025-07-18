@@ -20,13 +20,16 @@ extern char _binary_shell_bin_start[], _binary_shell_bin_size[];
 
 void virtio_blk_init(void);     // XXX: can be made more sophisticated
 void read_write_disk(void *buf, unsigned sector, bool is_write);
+void fs_init(void);
 
 void kernel_main(void)
 {
 	memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);  // set bss to 0 as a sanity check
     WRITE_CSR(stvec, (uint32_t) kernel_entry);
 
-    virtio_blk_init();
+    virtio_blk_init();  // XXX: probably want to refactor
+    fs_init();
+
     char buf[SECTOR_SIZE];
     read_write_disk(buf, 0, false /* read */);
     printf("first sector: %s\n", buf);
@@ -171,7 +174,7 @@ void yield(void)
 
 /*
  * ----------------------------------------------------------------------------------
- * FILE SYSTEM
+ * VIRTIO DISK I/O
  * ----------------------------------------------------------------------------------
  */
 uint32_t virtio_reg_read32(unsigned offset)
@@ -344,6 +347,114 @@ void read_write_disk(void *buf, unsigned sector, bool is_write)
     // For read operations, copy the data into the buffer.
     if (!is_write)
         memcpy(buf, blk_req->data, SECTOR_SIZE);
+}
+
+/*
+ * ----------------------------------------------------------------------------------
+ * FILE SYSTEM
+ * ----------------------------------------------------------------------------------
+ */
+
+struct file files[FILES_MAX];
+uint8_t disk[DISK_MAX_SIZE];
+
+int oct2int(char *oct, int len)
+{
+    int dec = 0;
+    for (int i = 0; i < len; i++) {
+        if (oct[i] < '0' || oct[i] > '7')
+            break;
+
+        dec = dec * 8 + (oct[i] - '0');
+    }
+    return dec;
+}
+
+void fs_init(void)
+{
+    /*
+     * Initializes by directly loading each file in archive into memory.
+     */
+    for (unsigned sector = 0; sector < sizeof(disk) / SECTOR_SIZE; sector++)
+        read_write_disk(&disk[sector * SECTOR_SIZE], sector, false);
+
+    unsigned off = 0;
+    for (int i = 0; i < FILES_MAX; i++) {
+        struct tar_header *header = (struct tar_header *) &disk[off];
+        if (header->name[0] == '\0')
+            break;
+
+        if (strcmp(header->magic, "ustar") != 0)
+            PANIC("invalid tar header: magic=\"%s\"", header->magic);
+
+        int filesz = oct2int(header->size, sizeof(header->size));
+
+        struct file *file = &files[i];
+        file->in_use = true;
+        strcpy(file->name, header->name);
+        memcpy(file->data, header->data, filesz);
+        file->size = filesz;
+        printf("file: %s, size=%d\n", file->name, file->size);
+
+        off += align_up(sizeof(struct tar_header) + filesz, SECTOR_SIZE);
+    }
+}
+
+void fs_flush(void)
+{
+    // copy file contents to disk buffer
+    memset(disk, 0, sizeof(disk));
+    unsigned off = 0;
+    for (int file_i = 0; file_i < FILES_MAX; file_i++) {
+        struct file *file = &files[file_i];
+        if (!file->in_use)
+            continue;
+
+        struct tar_header *header = (struct tar_header *) &disk[off];
+        memset(header, 0, sizeof(*header));
+        strcpy(header->name, file->name);
+        strcpy(header->mode, "000644");
+        strcpy(header->magic, "ustar");
+        strcpy(header->version, "00");
+        header->type = '0';
+
+        // turn into octal string
+        int filesz = file->size;
+        for (int i = sizeof(header->size); i > 0; i--) {
+            header->size[i - 1] = (filesz % 8) + '0';
+            filesz /= 8;
+        }
+
+        // calculate checksum
+        int checksum = ' ' * sizeof(header->checksum);
+        for (unsigned i = 0; i < sizeof(struct tar_header); i++)
+            checksum += (unsigned char) disk[off + i];
+        for (int i = 5; i >= 0; i--) {
+            header->checksum[i] = (checksum % 8) + '0';
+            checksum /= 8;
+        }
+
+        // copy file data
+        memcpy(header->data, file->data, file->size);
+        off += align_up(sizeof(struct tar_header) + file->size, SECTOR_SIZE);
+    }
+
+    // write `disk` buffer into virtio-blk
+    for (unsigned sector = 0; sector < sizeof(disk) / SECTOR_SIZE; sector++)
+        read_write_disk(&disk[sector * SECTOR_SIZE], sector, true);
+
+    printf("wrote %d ytes to disk\n", sizeof(disk));
+}
+
+struct file *fs_lookup(const char *filename)
+{
+    for (int i = 0; i < FILES_MAX; i++) {
+        struct file *file = &files[i];
+        if (!strcmp(file->name, filename))
+            return file;
+    }
+
+    return NULL;
 }
 
 //  ---------------------------

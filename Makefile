@@ -19,8 +19,12 @@ USER_ELF = shell.elf
 USER_BIN = shell.bin
 USER_BIN_O = shell.bin.o
 
+# disk, again come back to
+DISK_ARCHIVE = disk.tar
+DISK_DIR = disk
+
 # Default target
-all: $(KERNEL_ELF)
+all: $(KERNEL_ELF) $(DISK_ARCHIVE)
 
 # Kernel ELF depends on shell binary object (user program embedded)
 $(KERNEL_ELF): $(KERNEL_SRC) kernel.ld $(USER_BIN_O)
@@ -33,6 +37,9 @@ $(USER_BIN_O): $(USER_ELF)
 
 $(USER_ELF): $(USER_SRC) userspace.ld
 	$(CC) $(CFLAGS) $(USER_LDFLAGS) -o $@ $(USER_SRC)
+
+$(DISK_ARCHIVE): $(DISK_DIR)
+	tar cf $(PWD)/$(DISK_ARCHIVE) --format=ustar $(DISK_DIR)/*.txt
 
 # Targets
 app: $(USER_ELF) $(USER_BIN_O)
@@ -53,7 +60,8 @@ run-user: all
 		-serial mon:stdio \
 		--no-reboot \
 		-nographic \
-		-drive id=drive0,file=something.txt,format=raw,if=none \
+		-d unimp,guest_errors,int,cpu_reset -D qemu.log \
+		-drive id=drive0,file=$(DISK_ARCHIVE),format=raw,if=none \
 		-device virtio-blk-device,drive=drive0,bus=virtio-mmio-bus.0 \
 		-kernel $(KERNEL_ELF)
 
@@ -81,7 +89,7 @@ run-no-user: kern_elf
 		-kernel $(KERNEL_ELF)
 
 clean:
-	rm -f *.bin *.bin.o *.elf *.map
+	rm -f *.bin *.o *.elf *.map *.tar /disk/* *.log *.pcap
 
 .PHONY: all clean app kern_elf run-user run-no-user
 
